@@ -3,7 +3,7 @@
 Run:
     .venv/bin/python smoke.py
 or:
-    .venv/bin/inspect eval smoke.py --model anthropic/claude-opus-5
+    .venv/bin/inspect eval smoke.py --model anthropic/claude-haiku-4-5
 
 Logs land in ./logs (gitignored). View them with `inspect view`.
 """
@@ -16,7 +16,7 @@ from inspect_ai.dataset import Sample
 from inspect_ai.scorer import includes
 from inspect_ai.solver import generate, system_message
 
-MODEL = os.environ.get("INSPECT_EVAL_MODEL", "anthropic/claude-opus-5")
+MODEL = os.environ.get("INSPECT_EVAL_MODEL", "anthropic/claude-haiku-4-5")
 
 
 @task

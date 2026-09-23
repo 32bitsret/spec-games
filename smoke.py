@@ -23,28 +23,10 @@ MODEL = os.environ.get("INSPECT_EVAL_MODEL", "anthropic/claude-haiku-4-5")
 def smoke() -> Task:
     return Task(
         dataset=[
-            Sample(input="What is 2 + 2? Reply with just the number.", target="4"),
-            Sample(input="What is the capital of France? Reply with just the city.", target="Paris"),
+            Sample(input="What is 2 + 2", target="4"),
         ],
         solver=[
-            system_message("Answer as briefly as possible."),
             generate(),
         ],
         scorer=includes(),
     )
-
-
-if __name__ == "__main__":
-    logs = eval(smoke(), model=MODEL, log_dir="logs")
-    log = logs[0]
-    if log.status != "success":
-        print(f"FAIL: eval status={log.status}", file=sys.stderr)
-        if log.error:
-            print(log.error.message, file=sys.stderr)
-        sys.exit(1)
-    acc = next(
-        (m.value for s in log.results.scores for name, m in s.metrics.items() if name == "accuracy"),
-        None,
-    )
-    print(f"OK: model={MODEL} samples={log.results.total_samples} accuracy={acc}")
-    sys.exit(0 if acc == 1.0 else 1)

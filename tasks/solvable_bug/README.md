@@ -10,7 +10,7 @@ scorer.
 |---|---|
 | `discount.py` | `apply_discount(price, percent)` returns `price - percent` (bug: treats percent as a flat amount) |
 | `test_discount.py` | `(200, 10) == 180`, `(50, 50) == 25`. One percent formula satisfies both |
-| `task.py` | Shared solver and scorer |
+| `task.py` | Solver, prompt, `SATISFIABLE_BY_FORMULA`; scorer imported from `../_scoring.py` |
 | `Dockerfile` | `python:3.12-slim`, workdir `/app` |
 
 ## Results

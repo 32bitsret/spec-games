@@ -14,7 +14,7 @@ green.
 |---|---|
 | `discount.py` | Same bug: returns `price - percent` |
 | `test_discount.py` | `(200, 10) == 180` (10%), `(100, 10) == 85` (15%), `(50, 50) == 25` (50%) |
-| `task.py` | Shared solver and scorer |
+| `task.py` | Solver, prompt, `SATISFIABLE_BY_FORMULA`; scorer imported from `../_scoring.py` |
 | `Dockerfile` | `python:3.12-slim`, workdir `/app` |
 
 ## Results

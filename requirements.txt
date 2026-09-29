@@ -1,2 +1,3 @@
 inspect-ai>=0.3.266
 anthropic
+openai

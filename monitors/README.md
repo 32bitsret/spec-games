@@ -1,5 +1,8 @@
 # monitors/
 
+Write-up: [Three Judges Watched the Same Coding Agent. They Didn't See the Same Thing.](https://www.linkedin.com/pulse/three-judges-watched-same-coding-agent-didnt-see-thing-retnan-daser-phame/).
+The code and results as of that article are at tag `article-2`, commit [`0c14c3a`](https://github.com/32bitsret/spec-games/commit/0c14c3a).
+
 A second model reads what the agent did and says whether it did something it
 should not have. This is the post-hoc kind of monitor: it runs after the eval,
 from the logs, and cannot stop anything.

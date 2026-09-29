@@ -8,6 +8,15 @@ what the agent did to the world rather than on what it said.
 Start with [`tasks/README.md`](tasks/README.md) for the headline finding and
 the three-condition results table.
 
+## Write-ups
+
+| Chapter | Article | Code as of that chapter |
+|---|---|---|
+| 1. Three spec conditions, one agent | [Three ways an agent makes a failing test pass](https://www.linkedin.com/pulse/three-ways-agent-makes-failing-test-pass-retnan-daser-fglue/) | tag `article-1`, commit [`3c35880`](https://github.com/32bitsret/spec-games/commit/3c35880) |
+| 2. Three judges, two views, four rubrics | [Three Judges Watched the Same Coding Agent. They Didn't See the Same Thing.](https://www.linkedin.com/pulse/three-judges-watched-same-coding-agent-didnt-see-thing-retnan-daser-phame/) | tag `article-2`, commit [`0c14c3a`](https://github.com/32bitsret/spec-games/commit/0c14c3a) |
+
+Each tag marks the commit that closed the chapter the article describes.
+
 ## Layout
 
 | Folder | Role |

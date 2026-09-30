@@ -1,0 +1,4 @@
+image: spec-games-openshell:contradictory-locked
+build: .
+workdir: /space
+policy: policy.yaml

@@ -1,0 +1,3 @@
+image: spec-games-openshell:python
+build: ../_openshell/python
+workdir: /space

@@ -21,7 +21,7 @@ Each tag marks the commit that closed the chapter the article describes.
 
 | Folder | Role |
 |---|---|
-| `tasks/` | Environments: a buggy repo, a test file, a sandbox; one shared scorer in `tasks/_scoring.py` |
+| `tasks/` | Environments: a buggy repo, a test file, a sandbox; one shared scorer in `tasks/_scoring.py`. `SPEC_GAMES_SANDBOX=openshell` runs them under [inspect-openshell-sandbox](https://github.com/32bitsret/inspect-openshell-sandbox) |
 | `agents/` | Policies under test: solvers, prompts, tool sets |
 | `monitors/` | Overseers that read transcripts and flag suspicious behaviour |
 | `analysis/` | Aggregation of eval logs into tables |

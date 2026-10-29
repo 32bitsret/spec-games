@@ -125,9 +125,9 @@ def render(messages, upto: int, include_prose_of_cut: bool, include_call_of_cut:
 def render_live(history, call) -> str:
     """Cut C from what Inspect's approver is handed.
 
-    Inspect 0.3.266 passes the whole conversation, ending with the assistant message
-    that holds `call` (model/_call_tools.py, execute_tools passes `messages` through
-    as `conversation`). That message's text is the write turn's prose. If it is not
+    `history` must end with the assistant message that holds `call`; that message's
+    text is the write turn's prose. Inspect's basic_agent passes only that message,
+    so gate._conversation rebuilds the full history first. If the message is not
     there, fall back to the history as given plus the call alone, with no prose.
     """
     last = history[-1] if history else None

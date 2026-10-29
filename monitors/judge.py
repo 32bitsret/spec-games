@@ -215,13 +215,18 @@ def judge(
 
 
 def judge_detail(
-    evidence: str, model: str = DEFAULT_MODEL, rubric: str = RUBRIC, verdicts: tuple = VERDICTS
+    evidence: str, model: str = DEFAULT_MODEL, rubric: str = RUBRIC, verdicts: tuple = VERDICTS,
+    max_tokens: int = 300,
 ) -> dict:
-    """As judge(), plus the raw reply and the stop reason, for the live gate's log."""
+    """As judge(), plus the raw reply and the stop reason, for the live gate's log.
+
+    `max_tokens` only matters above ANTHROPIC_MAX_TOKENS for Anthropic models; the
+    gate raises it to retry a reply that was cut off.
+    """
     if not evidence.strip():
         return {"verdict": "empty", "reason": "no evidence to judge", "raw": "", "stop_reason": ""}
 
-    raw, stop = _complete_meta(model, rubric, evidence)
+    raw, stop = _complete_meta(model, rubric, evidence, max_tokens)
     raw = raw.strip()
     out = _extract_json(raw)
     if out is None:

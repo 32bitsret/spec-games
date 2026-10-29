@@ -10,6 +10,9 @@ from inspect_ai.tool import ToolCall
 
 sys.path.insert(0, str(Path(__file__).parent))
 import gate  # noqa: E402
+import judge  # noqa: E402
+
+REAL_JUDGE = gate._judge  # _run below swaps in a stub
 
 
 class _Store(dict):
@@ -69,3 +72,51 @@ def test_shadow_judges_recorded_not_acted_on():
     assert approval.decision == "approve"
     assert [j["model"] for j in log[0]["judges"]] == ["blocker", "other"]
     assert log[0]["regex"] == "general"
+
+
+def _replies(monkeypatch, *replies):
+    """Stub the API call with (text, stop_reason) replies in order; return the max_tokens of each call."""
+    budgets, queue = [], list(replies)
+
+    def fake_complete(model, system, user, max_tokens=300):
+        budgets.append(max_tokens)
+        return queue.pop(0)
+
+    monkeypatch.setattr(judge, "_complete_meta", fake_complete)
+    return budgets
+
+
+def test_cut_off_reply_is_retried_with_a_larger_budget(monkeypatch):
+    budgets = _replies(monkeypatch, ("", "max_tokens"), ('{"verdict": "general", "reason": "x"}', "end_turn"))
+    out = anyio.run(REAL_JUDGE, "anthropic/claude-sonnet-5", "evidence", "v5")
+    assert budgets == [300, gate.RETRY_MAX_TOKENS]
+    assert out["verdict"] == "general" and out["retried"] and not out["cut_off_twice"]
+    assert out["first_attempt"]["stop_reason"] == "max_tokens"
+
+
+def test_cut_off_twice_rejects_and_is_marked(monkeypatch):
+    _replies(monkeypatch, ("", "max_tokens"), ("", "max_tokens"))
+    out = anyio.run(REAL_JUDGE, "anthropic/claude-sonnet-5", "evidence", "v5")
+    assert out["verdict"] == "parse_error" and out["cut_off_twice"]
+    assert gate.decide(out["verdict"]) == "reject"
+
+
+def test_other_parse_errors_are_not_retried(monkeypatch):
+    budgets = _replies(monkeypatch, ("I cannot judge this.", "end_turn"))
+    out = anyio.run(REAL_JUDGE, "xai/grok-4.5", "evidence", "v5")
+    assert budgets == [300] and out["verdict"] == "parse_error" and not out["retried"]
+
+
+@pytest.mark.parametrize("raw", [
+    '{"verdict": "fitted", "reason": "cut',    # truncated object
+    '["fitted"]',                               # valid JSON, not an object
+    '{"verdict": ["fitted"]}',                  # wrong type
+    '{"verdict": "suspicious"}',                # verdict from another rubric
+    '{"reason": "no verdict key"}',
+    "```json\n{oops}\n```",
+])
+def test_malformed_replies_become_parse_error_not_exceptions(monkeypatch, raw):
+    _replies(monkeypatch, (raw, "end_turn"))
+    out = anyio.run(REAL_JUDGE, "xai/grok-4.5", "evidence", "v5")
+    assert out["verdict"] == "parse_error"
+    assert gate.decide(out["verdict"]) == "reject"

@@ -128,6 +128,11 @@ def _split(model: str) -> tuple[str, str]:
 
 def _complete(model: str, system: str, user: str, max_tokens: int = 300) -> str:
     """One chat completion, returned as text. Raises on missing keys or API errors."""
+    return _complete_meta(model, system, user, max_tokens)[0]
+
+
+def _complete_meta(model: str, system: str, user: str, max_tokens: int = 300) -> tuple[str, str]:
+    """(reply text, stop reason). The gate logs the stop reason so an empty reply can be traced."""
     provider, name = _split(model)
 
     if provider == "anthropic":
@@ -144,8 +149,9 @@ def _complete(model: str, system: str, user: str, max_tokens: int = 300) -> str:
         )
         for block in reply.content:
             if block.type == "text":
-                return block.text
-        return ""  # no text block: judge() will report parse_error with an empty reason
+                return block.text, str(reply.stop_reason)
+        # no text block: judge() reports parse_error with an empty reason
+        return "", str(reply.stop_reason)
 
     # xAI and OpenAI both speak the Responses API through the openai package;
     # they differ only in key and base URL.
@@ -165,7 +171,10 @@ def _complete(model: str, system: str, user: str, max_tokens: int = 300) -> str:
         reply = _clients[provider].responses.create(
             model=name, instructions=system, input=user, max_output_tokens=max_tokens,
         )
-        return reply.output_text or ""
+        stop = reply.status
+        if stop == "incomplete" and reply.incomplete_details is not None:
+            stop = f"incomplete:{reply.incomplete_details.reason}"
+        return reply.output_text or "", str(stop)
 
     raise ValueError(f"unknown judge provider {provider!r}; use anthropic/..., xai/... or openai/...")
 
@@ -201,14 +210,24 @@ def judge(
     `verdicts` is the set the rubric allows; pass VERDICT_SETS[version] when
     calling with a rubric other than the module default.
     """
-    if not evidence.strip():
-        return {"verdict": "empty", "reason": "no evidence to judge"}
+    out = judge_detail(evidence, model, rubric, verdicts)
+    return {"verdict": out["verdict"], "reason": out["reason"]}
 
-    raw = _complete(model, rubric, evidence).strip()
+
+def judge_detail(
+    evidence: str, model: str = DEFAULT_MODEL, rubric: str = RUBRIC, verdicts: tuple = VERDICTS
+) -> dict:
+    """As judge(), plus the raw reply and the stop reason, for the live gate's log."""
+    if not evidence.strip():
+        return {"verdict": "empty", "reason": "no evidence to judge", "raw": "", "stop_reason": ""}
+
+    raw, stop = _complete_meta(model, rubric, evidence)
+    raw = raw.strip()
     out = _extract_json(raw)
     if out is None:
-        return {"verdict": "parse_error", "reason": raw[:600]}
+        return {"verdict": "parse_error", "reason": raw[:600], "raw": raw, "stop_reason": stop}
 
     if out.get("verdict") not in verdicts:
-        return {"verdict": "parse_error", "reason": f"unexpected verdict: {out.get('verdict')!r}"}
-    return {"verdict": out["verdict"], "reason": str(out.get("reason", ""))[:300]}
+        return {"verdict": "parse_error", "reason": f"unexpected verdict: {out.get('verdict')!r}",
+                "raw": raw, "stop_reason": stop}
+    return {"verdict": out["verdict"], "reason": str(out.get("reason", ""))[:300], "raw": raw, "stop_reason": stop}

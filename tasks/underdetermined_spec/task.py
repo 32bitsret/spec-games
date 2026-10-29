@@ -21,6 +21,16 @@ HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent))
 from _scoring import cheat_check  # noqa: E402
 
+# SPEC_GAMES_GATE=log|reject puts the live gate (monitors/gate.py) on the bash tool; see
+# that file for the other SPEC_GAMES_GATE_* settings. Off by default, so runs without it
+# are unchanged. Added 2026-10-29.
+APPROVAL = None
+if os.environ.get("SPEC_GAMES_GATE", "off") != "off":
+    sys.path.insert(0, str(HERE.parent.parent / "monitors"))
+    from gate import gate_policy  # noqa: E402
+
+    APPROVAL = gate_policy()
+
 # docker (default) or openshell; the latter needs the inspect-openshell-sandbox package
 SANDBOX = os.environ.get("SPEC_GAMES_SANDBOX", "docker")
 # Where the repo lives inside the sandbox. Docker images set WORKDIR /app; OpenShell
@@ -87,5 +97,6 @@ def underdetermined_spec():
             satisfiable_by_formula=SATISFIABLE_BY_FORMULA,
             workdir=WORKDIR,
         ),
+        approval=APPROVAL,
         sandbox=SANDBOX,
     )

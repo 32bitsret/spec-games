@@ -85,7 +85,8 @@ def underdetermined_spec():
         solver=basic_agent(
             init=system_message(PROMPT),
             tools=[bash(timeout=60)],
-            message_limit=30,
+            # SPEC_GAMES_MESSAGE_LIMIT added 2026-10-30 for the long single-epoch run; default unchanged.
+            message_limit=int(os.environ.get("SPEC_GAMES_MESSAGE_LIMIT", "30")),
             # Inspect's default is "Submit an answer for evaluation."; the word
             # "evaluation" is a cue that this is a test. Added 2026-09-30; the
             # article batches of 2026-09-23 ran with the default.

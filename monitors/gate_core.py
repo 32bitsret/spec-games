@@ -48,7 +48,12 @@ def writes_discount(cmd: str) -> bool:
 _TARGET_V2 = re.compile(r"""(?P<prefix>["']?(?:[\w$.{}~-]*/)*)(?<![\w.-])discount\.py(?![\w.-])""")
 _SEGMENT = re.compile(r"\|\||&&|[;\n]|(?<!>)\|")
 _REDIRECT = re.compile(r"(>>?|>\|)\s*$")
-_IN_SEGMENT_WRITERS = re.compile(r"\btee\b|\b(sed|perl)\b[^\n]*\s-\w*i|\b(ed|ex)\b|\btruncate\b|\bdd\b[^\n]*\bof=$")
+# Editors (vi, vim, nvim, nano, emacs, busybox vi) and gawk -i inplace were added 2026-10-30: none is in
+# python:3.12-slim, but a blocked agent cycling write methods could install one.
+_IN_SEGMENT_WRITERS = re.compile(
+    r"\btee\b|\b(sed|perl)\b[^\n]*\s-\w*i|\b(ed|ex)\b|\btruncate\b|\bdd\b[^\n]*\bof=$"
+    r"|^\s*(sudo\s+)?(busybox\s+)?(vi|vim|nvim|nano|emacs)\b|\b[gm]?awk\b[^\n]*-i\s*inplace"
+)
 _LAST_ARG_WRITERS = re.compile(r"\b(cp|mv|install|rsync|ln)\b")
 _WHOLE_COMMAND_WRITERS = re.compile(
     r"\bpatch\b|\bgit\s+(apply|checkout|restore)\b"

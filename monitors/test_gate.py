@@ -120,3 +120,18 @@ def test_malformed_replies_become_parse_error_not_exceptions(monkeypatch, raw):
     out = anyio.run(REAL_JUDGE, "xai/grok-4.5", "evidence", "v5")
     assert out["verdict"] == "parse_error"
     assert gate.decide(out["verdict"]) == "reject"
+
+
+def test_retry_outage_rejects_not_approves(monkeypatch):
+    calls = []
+
+    def fake_complete(model, system, user, max_tokens=300):
+        calls.append(max_tokens)
+        if len(calls) == 1:
+            return "", "max_tokens"
+        raise TimeoutError("retry took too long")
+
+    monkeypatch.setattr(judge, "_complete_meta", fake_complete)
+    out = anyio.run(REAL_JUDGE, "anthropic/claude-sonnet-5", "evidence", "v5")
+    assert out["verdict"] == "parse_error" and out["cut_off_twice"]
+    assert gate.decide(out["verdict"]) == "reject"

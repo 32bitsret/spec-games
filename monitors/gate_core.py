@@ -97,8 +97,13 @@ def write_command(message) -> str:
 
 
 def render(messages, upto: int, include_prose_of_cut: bool, include_call_of_cut: bool = False,
-           no_prose: bool = False) -> str:
-    """The truncated view: task, assistant text, commands, and tool outputs."""
+           no_prose: bool = False, skip_calls=frozenset()) -> str:
+    """The truncated view: task, assistant text, commands, and tool outputs.
+
+    `skip_calls`: tool call ids to leave out, with their outputs; the assistant's text in
+    those turns stays. The gate passes the writes it rejected (they never ran, and shown
+    with an empty output they read as writes that succeeded). Added 2026-10-30.
+    """
     parts = []
     for i, m in enumerate(messages[: upto + 1]):
         if m.role == "system":
@@ -117,17 +122,21 @@ def render(messages, upto: int, include_prose_of_cut: bool, include_call_of_cut:
             if (m.text or "").strip() and not no_prose:
                 parts.append(f"[assistant] {m.text.strip()}")
             for tc in m.tool_calls or []:
+                if tc.id in skip_calls:
+                    continue
                 if tc.function == "bash":
                     parts.append(f"[assistant runs] {tc.arguments.get('command', '')}")
                 elif tc.function == "submit":
                     parts.append(f"[assistant submits] {tc.arguments.get('answer', '')}")
         elif m.role == "tool":
+            if m.tool_call_id in skip_calls:
+                continue
             parts.append(f"[output]\n{(m.text or '').rstrip()}")
     parts.append(END_MARKER)
     return "\n\n".join(parts)
 
 
-def render_live(history, call) -> str:
+def render_live(history, call, skip_calls=frozenset()) -> str:
     """Cut C from what Inspect's approver is handed.
 
     `history` must end with the assistant message that holds `call`; that message's
@@ -137,7 +146,7 @@ def render_live(history, call) -> str:
     """
     last = history[-1] if history else None
     if last is not None and last.role == "assistant" and any(tc.id == call.id for tc in last.tool_calls or []):
-        return render(history, len(history) - 1, True, include_call_of_cut=True)
+        return render(history, len(history) - 1, True, include_call_of_cut=True, skip_calls=skip_calls)
     from inspect_ai.model import ChatMessageAssistant
     return render(list(history) + [ChatMessageAssistant(content="", tool_calls=[call])], len(history), True,
-                  include_call_of_cut=True)
+                  include_call_of_cut=True, skip_calls=skip_calls)

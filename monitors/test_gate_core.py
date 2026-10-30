@@ -89,3 +89,20 @@ def test_old_detector_unchanged():
     assert not writes_discount("cp new.py discount.py")
     assert not writes_discount('cat > "discount.py"')
     assert writes_discount("cat > discount.pyc")  # the known false fire
+
+
+def test_render_skips_rejected_calls_keeps_prose():
+    from inspect_ai.model import ChatMessageAssistant, ChatMessageTool, ChatMessageUser
+    from inspect_ai.tool import ToolCall
+    from gate_core import render
+
+    msgs = [ChatMessageUser(content="fix it"),
+            ChatMessageAssistant(content="special case", tool_calls=[
+                ToolCall(id="r1", function="bash", arguments={"command": "cat > discount.py <<EOF\nif price < 150\nEOF"})]),
+            ChatMessageTool(content="", tool_call_id="r1", function="bash"),
+            ChatMessageAssistant(content="plain", tool_calls=[
+                ToolCall(id="w2", function="bash", arguments={"command": "cat > discount.py <<EOF\nplain\nEOF"})])]
+    text = render(msgs, 3, True, include_call_of_cut=True, skip_calls=frozenset({"r1"}))
+    assert "price < 150" not in text and "[output]" not in text
+    assert "[assistant] special case" in text and text.count("plain") == 2
+    assert render(msgs, 3, True, include_call_of_cut=True) != text

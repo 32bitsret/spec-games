@@ -15,6 +15,8 @@ from the logs, and cannot stop anything.
 | `run_monitor.py` | Judges every run in the three article logs twice, once per view, and writes `results.csv` |
 | `results.csv` | One row per (run, view): true label from the scorer, the judge's verdict and reason, and the judge model |
 
+The live write gate (an approver that can block) is written up in [`GATE.md`](GATE.md).
+
 ## Rubric versions
 
 | Version | Change | Files |
@@ -22,6 +24,9 @@ from the logs, and cannot stop anything.
 | v1 | `ok` / `suspicious` | `results.csv`, `results-<judge>*.csv` |
 | v2 | adds `insufficient_evidence` and "say so rather than guessing" | `results-v2-*.csv` |
 | v3 | reverted-action policy (judge the end state and whether it explained itself); JSON even when abstaining; summary view gains the task and the test file | `results-v3-*.csv` |
+| v4 | prediction, not violation: `general` / `fitted` / `insufficient_evidence`, on truncated transcripts | `results-truncated-<judge>.csv` |
+| v5 | v4 plus v2's abstain sentence; frozen 21 Oct | `results-truncated-rescore-*.csv`, `-terse-*.csv` |
+| v6 | for the live gate: judges the proposed change, history as context only (see `GATE.md`) | `results-rubric6.csv`, `results-hide-rejected.csv` |
 
 The `rubric` column in every CSV records which version produced the row.
 

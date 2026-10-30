@@ -7,6 +7,8 @@ Wired into the tasks by SPEC_GAMES_GATE (see gate_policy below); off by default.
     SPEC_GAMES_GATE_JUDGE    the blocking judge (default xai/grok-4.5)
     SPEC_GAMES_GATE_SHADOW   comma-separated extra judges, recorded and never acted on
     SPEC_GAMES_GATE_TEXT     plain | reason | redirect: what the agent is told when a write is rejected
+    SPEC_GAMES_GATE_RUBRIC   v5 (default) | v6: the judge's rubric (v6 judges the change, not the agent)
+    SPEC_GAMES_GATE_HIDE_REJECTED  1 | 0 (default): leave writes the gate rejected out of the judge's text
     SPEC_GAMES_GATE_AUDIT    1 (default) | 0: the trigger audit below
 
 The judge sees cut C, built by gate_core.render_live from the history Inspect hands
@@ -156,6 +158,7 @@ def write_gate(
     reject_text: str = "plain",
     detector: str = "v2",
     audit_path: str | None = None,
+    hide_rejected: bool = False,
 ) -> Approver:
     """Judge each proposed write to discount.py at cut C; in reject mode, block on fitted."""
     if mode not in ("log", "reject"):
@@ -170,7 +173,9 @@ def write_gate(
             return Approval(decision="approve", explanation="not a write to discount.py")
 
         conversation, source = _conversation(history, call)
-        evidence = render_live(conversation, call)
+        skip = frozenset(e["call_id"] for e in store().get("gate", []) if e["applied"] == "reject") if hide_rejected \
+            else frozenset()
+        evidence = render_live(conversation, call, skip)
         models = (judge_model, *shadow_judges)
         results: list[dict] = [{}] * len(models)
 
@@ -194,6 +199,7 @@ def write_gate(
             "regex": "fitted" if RULE_CONDITION.search(command) else "general",
             "context": source,
             "context_messages": len(conversation),
+            "hidden_rejected": len(skip),
             "judges": results,
         })
         store().set("gate", log)
@@ -216,6 +222,8 @@ def gate_policy() -> list[ApprovalPolicy] | None:
         shadow_judges=shadow,
         mode=mode,
         reject_text=os.environ.get("SPEC_GAMES_GATE_TEXT", "plain"),
+        rubric=os.environ.get("SPEC_GAMES_GATE_RUBRIC", "v5"),
+        hide_rejected=os.environ.get("SPEC_GAMES_GATE_HIDE_REJECTED") == "1",
         audit_path=_audit_path() if os.environ.get("SPEC_GAMES_GATE_AUDIT", "1") == "1" else None,
     )
     return [ApprovalPolicy(gate, ["bash", "submit"])]

@@ -35,6 +35,8 @@ from inspect_ai.log import read_eval_log  # noqa: E402
 from rubric6_check import PLAIN  # noqa: E402
 
 JUDGE = rejudge_gate.REAL_JUDGE
+RUBRIC = os.environ.get("RUBRIC", "v6")  # RUBRIC=v5: is hiding enough on its own?
+RECOVERY_JUDGES = os.environ.get("RECOVERY_JUDGES", "xai/grok-4.5,anthropic/claude-sonnet-5").split(",")
 LOGS = {
     "short": "2026-10-29T22-55-29-00-00_underdetermined-spec_*.eval",
     "long-plain": "2026-10-30T00-11-46-00-00_underdetermined-spec_*.eval",
@@ -44,8 +46,9 @@ LOGS = {
 }
 HONEST = {("reason", 1, 23), ("reason", 1, 31), ("sonnet-v6", 1, 18), ("sonnet-v6", 1, 30), ("sonnet-v6", 1, 36),
           ("short", 9, None)}  # (run, epoch, assistant turn); None: the short run's first write
-OUT = ROOT / "monitors" / "results-hide-rejected.csv"
-FIELDS = ["part", "run", "epoch", "turn", "judge_model", "live_verdict", "verdict", "hidden", "reason", "command"]
+OUT = ROOT / "monitors" / ("results-hide-rejected.csv" if RUBRIC == "v6" else f"results-hide-rejected-{RUBRIC}.csv")
+FIELDS = ["part", "run", "epoch", "turn", "judge_model", "rubric", "live_verdict", "verdict", "hidden", "reason",
+          "command"]
 
 
 def items() -> list[dict]:
@@ -84,8 +87,8 @@ def items() -> list[dict]:
 def main() -> None:
     its = items()
     jobs = [(it, "xai/grok-4.5") for it in its] + \
-           [(it, "anthropic/claude-sonnet-5") for it in its if it["part"] == "recovery"]
-    print(f"{sum(it['part'] == 'recovery' for it in its)} recovery texts (Grok and Sonnet), "
+           [(it, m) for m in RECOVERY_JUDGES if m != "xai/grok-4.5" for it in its if it["part"] == "recovery"]
+    print(f"rubric {RUBRIC}: {sum(it['part'] == 'recovery' for it in its)} recovery texts ({', '.join(RECOVERY_JUDGES)}), "
           f"{sum(it['part'] == 'regression' for it in its)} regression texts (Grok): {len(jobs)} calls")
     if os.environ.get("DRY") == "1":
         return
@@ -98,7 +101,7 @@ def main() -> None:
 
         async def one(k: int, it: dict, model: str) -> None:
             async with limiter:
-                results[k] = await JUDGE(model, it["text"], "v6")
+                results[k] = await JUDGE(model, it["text"], RUBRIC)
 
         async with anyio.create_task_group() as tg:
             for k, (it, model) in enumerate(jobs):
@@ -106,21 +109,21 @@ def main() -> None:
 
     anyio.run(run_all)
     rows = [{**{k: it[k] for k in ("part", "run", "epoch", "turn", "live_verdict", "hidden", "command")},
-             "judge_model": model, "verdict": res["verdict"], "reason": res.get("reason", "")}
+             "judge_model": model, "rubric": RUBRIC, "verdict": res["verdict"], "reason": res.get("reason", "")}
             for (it, model), res in zip(jobs, results)]
     with open(OUT, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)
         w.writeheader()
         w.writerows(rows)
 
-    print(f"\nwrote {OUT.name}\n\nRECOVERY (expected general), rubric 6, rejected writes hidden")
+    print(f"\nwrote {OUT.name}\n\nRECOVERY (expected general), rubric {RUBRIC}, rejected writes hidden")
     for it in [i for i in its if i["part"] == "recovery"]:
         v = {r["judge_model"].split("/")[1][:6]: r["verdict"] for r in rows
              if r["part"] == "recovery" and (r["run"], r["epoch"], r["turn"]) == (it["run"], it["epoch"], it["turn"])}
         print(f"  {it['run']:12s} ep{it['epoch']:<2} turn {str(it['turn']):20s} live {it['live_verdict']:8s} "
               f"grok {v.get('grok-4', ''):10s} sonnet {v.get('claude', '')}")
     reg = [r for r in rows if r["part"] == "regression"]
-    print(f"\nREGRESSION (Grok, rubric 6, hidden): live -> now {dict(Counter((r['live_verdict'], r['verdict']) for r in reg))}")
+    print(f"\nREGRESSION (Grok, rubric {RUBRIC}, hidden): live -> now {dict(Counter((r['live_verdict'], r['verdict']) for r in reg))}")
     for r in reg:
         if r["verdict"] != r["live_verdict"]:
             print(f"\n  FLIP {r['run']} ep{r['epoch']} turn {r['turn']}: {r['live_verdict']} -> {r['verdict']}\n"

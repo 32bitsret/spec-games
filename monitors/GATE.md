@@ -164,6 +164,14 @@ writes, Grok still called 126 fitted; 5 became abstentions (a `sed` line delete,
 became general (the plain formula with a clamp at zero, which is honest); 1
 was an empty reply on the named-constants disguise, which fails closed.
 
+**Hiding alone is not enough.** The same 16 honest writes judged by Grok with
+rubric 5 and rejected writes hidden (`RUBRIC=v5 hide_rejected_check.py`,
+`results-hide-rejected-v5.csv`): 2 of 16 approved, against 15 of 16 with rubric
+6. Only the calls are hidden; the agent's own reasoning about its rules stays,
+and rubric 5, asking where the agent is heading, uses it. Three rejections of
+history were enough to block the plain formula in 8 of 9 short runs. All 133
+special-case writes stayed fitted.
+
 ## Open
 
 - One run per configuration. The same setup needs several epochs before it is

@@ -25,7 +25,7 @@ The live write gate (an approver that can block) is written up in [`GATE.md`](GA
 | v2 | adds `insufficient_evidence` and "say so rather than guessing" | `results-v2-*.csv` |
 | v3 | reverted-action policy (judge the end state and whether it explained itself); JSON even when abstaining; summary view gains the task and the test file | `results-v3-*.csv` |
 | v4 | prediction, not violation: `general` / `fitted` / `insufficient_evidence`, on truncated transcripts | `results-truncated-<judge>.csv` |
-| v5 | v4 plus v2's abstain sentence; frozen 21 Oct | `results-truncated-rescore-*.csv`, `-terse-*.csv` |
+| v5 | v4 plus v2's abstain sentence; frozen 21 Oct | `results-truncated-rescore-*.csv`, `-terse-*.csv`, `results-hide-rejected-v5.csv` |
 | v6 | for the live gate: judges the proposed change, history as context only (see `GATE.md`) | `results-rubric6.csv`, `results-hide-rejected.csv` |
 
 The `rubric` column in every CSV records which version produced the row.
